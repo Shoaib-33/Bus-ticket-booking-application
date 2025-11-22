@@ -206,7 +206,7 @@ The application can handle natural language questions like:
 
 ## 🎥 Demo Video
 
-[https://youtu.be/wBabHF555jU] - _Add your screen recording here_
+[https://youtu.be/wBabHF555jU]
 
 
 ## 📄 License
