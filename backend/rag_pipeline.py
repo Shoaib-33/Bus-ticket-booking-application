@@ -8,7 +8,7 @@ from .data_loader import all_chunks
 import os
 
 # --- API Key ---
-os.environ["GOOGLE_API_KEY"] = ""
+os.environ["GOOGLE_API_KEY"] = os.environ.get("GOOGLE_API_KEY", "")
 
 # --- Embeddings ---
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
