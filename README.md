@@ -2,6 +2,8 @@
 
 A comprehensive bus ticket booking system with AI-powered search capabilities, built using FastAPI and a RAG (Retrieval-Augmented Generation) pipeline for intelligent query handling.
 
+
+Demo at:https://www.loom.com/share/986076c39f7d46b396593969bbc1cc46
 ---
 
 ## 🎯 Project Overview
