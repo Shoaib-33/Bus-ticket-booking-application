@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}My Bookings — BusGo{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title">My <span class="accent">Bookings</span></h1>
+    <p class="page-sub">View and manage your ticket reservations</p>
+</div>
+
+<div class="card search-card">
+    <div class="search-row">
+        <input type="text" id="phoneInput" class="form-input" placeholder="Enter phone number — 01XXXXXXXXX" style="flex:1">
+        <button class="btn btn-primary" onclick="searchBookings()">🔍 Search</button>
+    </div>
+</div>
+
+<div id="bookingsResult"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function searchBookings() {
+    let phone = document.getElementById('phoneInput').value.trim();
+    if (phone.startsWith('+88')) phone = phone.slice(3);
+    if (!phone) return showToast('Please enter your phone number.', 'error');
+
+    const result = document.getElementById('bookingsResult');
+    result.innerHTML = '<div class="loading">Searching...</div>';
+
+    try {
+        const res = await fetch(`/bookings/phone/${encodeURIComponent(phone)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+            result.innerHTML = `<div class="empty-state">📭 No bookings found for this number.</div>`;
+            return;
+        }
+
+        const bookings = data.bookings || [];
+        if (!bookings.length) {
+            result.innerHTML = `<div class="empty-state">📭 No bookings found.</div>`;
+            return;
+        }
+
+        result.innerHTML = `<div class="result-count">Found ${bookings.length} booking(s)</div>` +
+            bookings.map(b => `
+            <div class="booking-item ${b.status}" id="booking-${b.booking_id}">
+                <div class="booking-header">
+                    <div class="booking-id">${b.booking_id}</div>
+                    <div class="booking-status status-${b.status}">${b.status.toUpperCase()}</div>
+                </div>
+                <div class="booking-body">
+                    <div class="booking-col">
+                        <div class="booking-field"><span>Passenger</span><strong>${b.name}</strong></div>
+                        <div class="booking-field"><span>Phone</span><strong>${b.phone}</strong></div>
+                        <div class="booking-field"><span>Passengers</span><strong>${b.num_passengers}</strong></div>
+                    </div>
+                    <div class="booking-col">
+                        <div class="booking-field"><span>Provider</span><strong>${b.bus_provider}</strong></div>
+                        <div class="booking-field"><span>Route</span><strong>${b.from_district} → ${b.to_district}</strong></div>
+                        <div class="booking-field"><span>Dropping Point</span><strong>${b.dropping_point}</strong></div>
+                        <div class="booking-field"><span>Travel Date</span><strong>${b.travel_date}</strong></div>
+                    </div>
+                    <div class="booking-col">
+                        <div class="booking-field"><span>Fare/person</span><strong>${b.fare} Taka</strong></div>
+                        <div class="booking-field total-field"><span>Total</span><strong>${b.total_amount} Taka</strong></div>
+                        <div class="booking-field"><span>Booked On</span><strong>${b.booking_date.slice(0,10)}</strong></div>
+                    </div>
+                </div>
+                ${b.status === 'active' ? `
+                <div class="booking-footer">
+                    <button class="btn btn-danger" onclick="cancelBooking('${b.booking_id}')">❌ Cancel Booking</button>
+                </div>` : ''}
+            </div>`).join('');
+    } catch(e) {
+        result.innerHTML = `<div class="empty-state">⚠️ Connection error. Is the backend running?</div>`;
+    }
+}
+
+async function cancelBooking(bookingId) {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    try {
+        const res = await fetch(`/bookings/${bookingId}?permanent=false`, { method: 'DELETE' });
+        if (res.ok) {
+            const item = document.getElementById(`booking-${bookingId}`);
+            item.querySelector('.booking-status').textContent = 'CANCELLED';
+            item.querySelector('.booking-status').className = 'booking-status status-cancelled';
+            item.querySelector('.booking-footer').remove();
+            item.classList.remove('active');
+            item.classList.add('cancelled');
+            showToast('Booking cancelled successfully.', 'success');
+        } else {
+            const d = await res.json();
+            showToast(d.detail || 'Failed to cancel.', 'error');
+        }
+    } catch(e) { showToast('Connection error.', 'error'); }
+}
+
+// Allow Enter key to search
+document.getElementById('phoneInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchBookings();
+});
+</script>
+{% endblock %}

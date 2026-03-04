@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BusGo — Ticket Booking{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="/" class="logo">🚌 BusGo</a>
+    <div class="nav-links">
+        <a href="/" class="nav-link {% if active == 'book' %}active{% endif %}">Book Ticket</a>
+        <a href="/bookings-page" class="nav-link {% if active == 'bookings' %}active{% endif %}">My Bookings</a>
+        <a href="/providers-page" class="nav-link {% if active == 'providers' %}active{% endif %}">Providers</a>
+        <a href="/routes-page" class="nav-link {% if active == 'routes' %}active{% endif %}">Routes & Fares</a>
+        <a href="/assistant-page" class="nav-link {% if active == 'assistant' %}active{% endif %}">AI Assistant</a>
+    </div>
+    <div class="nav-status" id="statusDot" title="Checking backend...">●</div>
+</nav>
+
+<main class="main-content">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="/static/js/main.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

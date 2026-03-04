@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Providers — BusGo{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title">Bus <span class="accent">Providers</span></h1>
+    <p class="page-sub">Explore all available bus services</p>
+</div>
+
+<div class="providers-grid">
+{% for provider in providers %}
+<div class="provider-card">
+    <div class="provider-header">
+        <div class="provider-icon">🚌</div>
+        <div>
+            <h3 class="provider-name">{{ provider.name }}</h3>
+            <div class="provider-meta">{{ provider.coverage_districts | length }} districts covered</div>
+        </div>
+    </div>
+
+    <details class="coverage-details">
+        <summary>View Coverage Districts</summary>
+        <div class="district-tags">
+            {% for d in provider.coverage_districts %}
+            <span class="district-tag">{{ d }}</span>
+            {% endfor %}
+        </div>
+    </details>
+
+    <button class="btn btn-outline btn-full" onclick="loadPolicy('{{ provider.name }}', this)">
+        📄 View Policy
+    </button>
+
+    <div id="policy-{{ loop.index }}" class="policy-box hidden" data-index="{{ loop.index }}"></div>
+</div>
+{% endfor %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadPolicy(providerName, btn) {
+    const idx = btn.closest('.provider-card').querySelector('.policy-box').dataset.index;
+    const box = document.getElementById(`policy-${idx}`);
+
+    if (!box.classList.contains('hidden')) {
+        box.classList.add('hidden');
+        btn.textContent = '📄 View Policy';
+        return;
+    }
+
+    btn.textContent = 'Loading...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`/providers/${encodeURIComponent(providerName)}/policy`);
+        const data = await res.json();
+        if (res.ok) {
+            box.textContent = data.policy;
+            box.classList.remove('hidden');
+            btn.textContent = '🙈 Hide Policy';
+        } else {
+            showToast('Policy not available for this provider.', 'error');
+            btn.textContent = '📄 View Policy';
+        }
+    } catch(e) {
+        showToast('Connection error.', 'error');
+        btn.textContent = '📄 View Policy';
+    }
+    btn.disabled = false;
+}
+</script>
+{% endblock %}

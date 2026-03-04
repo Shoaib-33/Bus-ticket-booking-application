@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Routes & Fares — BusGo{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title">Routes & <span class="accent">Fares</span></h1>
+    <p class="page-sub">Browse all destinations and ticket prices</p>
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+    <input type="text" id="searchInput" class="form-input" placeholder="🔍 Search district or dropping point..." oninput="filterDistricts()">
+</div>
+
+<div class="districts-grid" id="districtsGrid">
+{% for district in districts %}
+<div class="district-card" data-name="{{ district.name | lower }}" data-points="{{ district.dropping_points | map(attribute='name') | join(',') | lower }}">
+    <div class="district-header">
+        <h3 class="district-name">📍 {{ district.name }}</h3>
+        <div class="district-count">{{ district.dropping_points | length }} stops</div>
+    </div>
+
+    {% if district.dropping_points %}
+    <div class="price-range">
+        <span class="price-label">From</span>
+        <span class="price-val">{{ district.dropping_points | map(attribute='price') | min }} Taka</span>
+        <span class="price-label">to</span>
+        <span class="price-val">{{ district.dropping_points | map(attribute='price') | max }} Taka</span>
+    </div>
+
+    <details class="stops-details">
+        <summary>View Dropping Points</summary>
+        <div class="stops-list">
+            {% for dp in district.dropping_points %}
+            <div class="stop-row">
+                <span class="stop-name">🚏 {{ dp.name }}</span>
+                <span class="stop-price">{{ dp.price }} Taka</span>
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+</div>
+{% endfor %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterDistricts() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('.district-card').forEach(card => {
+        const name = card.dataset.name;
+        const points = card.dataset.points;
+        card.style.display = (name.includes(q) || points.includes(q)) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: busgo_app
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist the SQLite database
+      - ./bus_bookings.db:/app/bus_bookings.db
+      # Persist the vector store
+      - ./vectorstore:/app/vectorstore
+    env_file:
+      - .env
+    restart: unless-stopped

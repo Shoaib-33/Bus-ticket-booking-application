@@ -1,0 +1,66 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# ===== Virtual Environment =====
+venv/
+env/
+ENV/
+.venv/
+
+# ===== Environment Variables =====
+.env
+.env.*
+!.env.example
+
+# ===== Database =====
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== Vector Store / ChromaDB =====
+vectorstore/
+chroma_db/
+chunks.txt
+
+# ===== Logs =====
+*.log
+logs/
+
+# ===== OS Files =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===== Docker =====
+.dockerignore
+
+# ===== Misc =====
+*.bak
+*.tmp
+*.swp

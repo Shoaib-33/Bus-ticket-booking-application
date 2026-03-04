@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}Book Ticket — BusGo{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title">Book Your <span class="accent">Ticket</span></h1>
+    <p class="page-sub">Fast, simple bus booking across Bangladesh</p>
+</div>
+
+<div class="card booking-card">
+    <div class="step-label">Step 1 — Route Details</div>
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label class="form-label">Bus Provider</label>
+            <select id="providerSelect" class="form-select" onchange="onProviderChange()">
+                <option value="">Select provider...</option>
+                {% for p in providers %}
+                <option value="{{ p.name }}" data-districts="{{ p.coverage_districts | join(',') }}">{{ p.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">From District</label>
+            <select id="fromDistrict" class="form-select" onchange="onFromChange()" disabled>
+                <option value="">Select provider first...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">To District</label>
+            <select id="toDistrict" class="form-select" onchange="onToChange()" disabled>
+                <option value="">Select from district...</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Dropping Point</label>
+            <select id="droppingPoint" class="form-select" onchange="onDropChange()" disabled>
+                <option value="">Select destination...</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="routeSummary" class="route-summary hidden">
+        <span id="summaryText"></span>
+    </div>
+</div>
+
+<div class="card booking-card">
+    <div class="step-label">Step 2 — Passenger Details</div>
+
+    <div class="form-grid">
+        <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input type="text" id="passengerName" class="form-input" placeholder="Enter your full name">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="text" id="passengerPhone" class="form-input" placeholder="01XXXXXXXXX">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Number of Passengers</label>
+            <input type="number" id="numPassengers" class="form-input" value="1" min="1" max="10" onchange="updateTotal()">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Travel Date</label>
+            <input type="date" id="travelDate" class="form-input">
+        </div>
+    </div>
+
+    <div id="totalBox" class="total-box hidden">
+        💰 Total: <strong id="totalAmount">0</strong> Taka
+    </div>
+
+    <button class="btn btn-primary btn-full" onclick="submitBooking()">
+        🎫 Confirm Booking
+    </button>
+</div>
+
+<!-- Success Modal -->
+<div id="successModal" class="modal hidden">
+    <div class="modal-box">
+        <div class="modal-icon">✅</div>
+        <h2>Booking Confirmed!</h2>
+        <div id="modalContent" class="modal-content"></div>
+        <button class="btn btn-primary" onclick="closeModal()">Done</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set min date to tomorrow
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('travelDate').min = tomorrow.toISOString().split('T')[0];
+    document.getElementById('travelDate').value = tomorrow.toISOString().split('T')[0];
+
+    function onProviderChange() {
+        const sel = document.getElementById('providerSelect');
+        const opt = sel.options[sel.selectedIndex];
+        const from = document.getElementById('fromDistrict');
+        const to = document.getElementById('toDistrict');
+        const dp = document.getElementById('droppingPoint');
+
+        from.innerHTML = '<option value="">Select from district...</option>';
+        to.innerHTML = '<option value="">Select to district...</option>';
+        dp.innerHTML = '<option value="">Select destination first...</option>';
+        to.disabled = true;
+        dp.disabled = true;
+        hideRouteSummary();
+
+        if (!opt.value) { from.disabled = true; return; }
+
+        const districts = opt.dataset.districts.split(',');
+        districts.forEach(d => {
+            const o = document.createElement('option');
+            o.value = d.trim(); o.textContent = d.trim();
+            from.appendChild(o);
+        });
+        from.disabled = false;
+    }
+
+    function onFromChange() {
+        const from = document.getElementById('fromDistrict').value;
+        const provSel = document.getElementById('providerSelect');
+        const opt = provSel.options[provSel.selectedIndex];
+        const to = document.getElementById('toDistrict');
+        const dp = document.getElementById('droppingPoint');
+
+        to.innerHTML = '<option value="">Select to district...</option>';
+        dp.innerHTML = '<option value="">Select destination first...</option>';
+        dp.disabled = true;
+        hideRouteSummary();
+
+        if (!from) { to.disabled = true; return; }
+
+        const districts = opt.dataset.districts.split(',').map(d => d.trim()).filter(d => d !== from);
+        districts.forEach(d => {
+            const o = document.createElement('option');
+            o.value = d; o.textContent = d;
+            to.appendChild(o);
+        });
+        to.disabled = false;
+    }
+
+    async function onToChange() {
+        const to = document.getElementById('toDistrict').value;
+        const dp = document.getElementById('droppingPoint');
+        dp.innerHTML = '<option value="">Loading...</option>';
+        dp.disabled = true;
+        hideRouteSummary();
+
+        if (!to) return;
+
+        const res = await fetch(`/dropping-points/${encodeURIComponent(to)}`);
+        const data = await res.json();
+        dp.innerHTML = '<option value="">Select dropping point...</option>';
+        (data.dropping_points || []).forEach(pt => {
+            const o = document.createElement('option');
+            o.value = pt.name;
+            o.textContent = `${pt.name} — ${pt.price} Taka`;
+            o.dataset.price = pt.price;
+            dp.appendChild(o);
+        });
+        dp.disabled = false;
+    }
+
+    function onDropChange() {
+        updateTotal();
+        const from = document.getElementById('fromDistrict').value;
+        const to = document.getElementById('toDistrict').value;
+        const dp = document.getElementById('droppingPoint');
+        const opt = dp.options[dp.selectedIndex];
+        if (opt.value) {
+            document.getElementById('summaryText').textContent =
+                `✅ ${from} → ${to}  |  ${opt.value}  |  ${opt.dataset.price} Taka/person`;
+            document.getElementById('routeSummary').classList.remove('hidden');
+        } else {
+            hideRouteSummary();
+        }
+    }
+
+    function updateTotal() {
+        const dp = document.getElementById('droppingPoint');
+        const opt = dp.options[dp.selectedIndex];
+        const n = parseInt(document.getElementById('numPassengers').value) || 1;
+        if (opt && opt.dataset.price) {
+            const total = parseInt(opt.dataset.price) * n;
+            document.getElementById('totalAmount').textContent = total;
+            document.getElementById('totalBox').classList.remove('hidden');
+        }
+    }
+
+    function hideRouteSummary() {
+        document.getElementById('routeSummary').classList.add('hidden');
+        document.getElementById('totalBox').classList.add('hidden');
+    }
+
+    async function submitBooking() {
+        const provider = document.getElementById('providerSelect').value;
+        const from = document.getElementById('fromDistrict').value;
+        const to = document.getElementById('toDistrict').value;
+        const dp = document.getElementById('droppingPoint').value;
+        const name = document.getElementById('passengerName').value.trim();
+        let phone = document.getElementById('passengerPhone').value.trim();
+        const n = parseInt(document.getElementById('numPassengers').value);
+        const date = document.getElementById('travelDate').value;
+
+        if (!provider || !from || !to || !dp) return showToast('Please complete route selection.', 'error');
+        if (!name) return showToast('Please enter your name.', 'error');
+        if (phone.startsWith('+88')) phone = phone.slice(3);
+        if (phone.length < 11 || !/^\d+$/.test(phone)) return showToast('Enter a valid 11-digit phone number.', 'error');
+
+        const btn = document.querySelector('.btn-primary');
+        btn.disabled = true; btn.textContent = 'Booking...';
+
+        try {
+            const res = await fetch('/bookings', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    name, phone, bus_provider: provider,
+                    from_district: from, to_district: to,
+                    dropping_point: dp, travel_date: date, num_passengers: n
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('modalContent').innerHTML = `
+                    <div class="booking-result">
+                        <div class="result-row"><span>Booking ID</span><strong>${data.booking_id}</strong></div>
+                        <div class="result-row"><span>Name</span><strong>${data.name}</strong></div>
+                        <div class="result-row"><span>Route</span><strong>${data.from_district} → ${data.to_district}</strong></div>
+                        <div class="result-row"><span>Dropping Point</span><strong>${data.dropping_point}</strong></div>
+                        <div class="result-row"><span>Provider</span><strong>${data.bus_provider}</strong></div>
+                        <div class="result-row"><span>Date</span><strong>${data.travel_date}</strong></div>
+                        <div class="result-row"><span>Passengers</span><strong>${data.num_passengers}</strong></div>
+                        <div class="result-row total-row"><span>Total</span><strong>${data.total_amount} Taka</strong></div>
+                    </div>`;
+                document.getElementById('successModal').classList.remove('hidden');
+            } else {
+                showToast(data.detail || 'Booking failed.', 'error');
+            }
+        } catch(e) { showToast('Connection error.', 'error'); }
+        btn.disabled = false; btn.textContent = '🎫 Confirm Booking';
+    }
+
+    function closeModal() {
+        document.getElementById('successModal').classList.add('hidden');
+        location.reload();
+    }
+</script>
+{% endblock %}
